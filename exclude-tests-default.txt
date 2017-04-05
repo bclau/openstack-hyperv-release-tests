@@ -14,3 +14,6 @@ tempest.scenario.test_network_v6.TestGettingAddress
 
 # exclude tests due to bug: https://bugs.launchpad.net/tempest/+bug/1582730
 tempest.api.compute.volumes.test_attach_volume.AttachVolumeShelveTestJSON
+
+# volume swap is unsupported.
+tempest.api.compute.admin.test_volume_swap.TestVolumeSwap
