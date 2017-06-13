@@ -193,6 +193,13 @@ function check_host_services_count() {
         echo "Current active neutron Hyper-V agents: $hyperv_agent_hosts expected: $expected_hosts_count"
         return 1
     fi
+
+    # we should only use one cinder-volume service at a time for testing.
+    local cinder_volume_services=`get_cinder_service_hosts | wc -l`
+    if [ $cinder_volume_services -gt 1 ]; then
+        echo "Current active cinder-volume services running: $cinder_volume_services"
+        return 1
+    fi
 }
 
 function exec_with_retry () {
