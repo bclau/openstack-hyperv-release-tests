@@ -473,7 +473,7 @@ do
     sed -i "s#<%DEVSTACK_BRANCH%>#$DEVSTACK_BRANCH#g" $temp_setup_dir/local.conf
     sed -i "s#<%DEVSTACK_TAG%>#$DEVSTACK_TAG#g" $temp_setup_dir/local.conf
     sed -i "s#<%DEVSTACK_LOGS_DIR%>#$container_screen_logs#g" $temp_setup_dir/local.conf
-
+    scp -i $ssh_key restart_nova_services.sh "$CONTAINER_USER@$DEVSTACK_IP_ADDR:$devstack_dir/restart_nova_services.sh"
 
     if [ -n "${devstack_config[Q_ML2_TENANT_NETWORK_TYPE]}" ]; then
         sed -i "s/Q_ML2_TENANT_NETWORK_TYPE=.*/Q_ML2_TENANT_NETWORK_TYPE=${devstack_config[Q_ML2_TENANT_NETWORK_TYPE]}/g" $temp_setup_dir/local.conf
@@ -546,7 +546,11 @@ do
     exec_with_retry 30 2 check_host_services_count ${#host_names[@]} \"$neutron_agent_type\"
 
     if [[ "$DEVSTACK_BRANCH" == "stable/ocata" ]] || [[ "$DEVSTACK_BRANCH" == "master" ]]; then
-        run_ssh $DEVSTACK_IP_ADDR "url=`grep transport_url /etc/nova/nova-dhcpbridge.conf | awk '{print \$3}'` ; nova-manage cell_v2 simple_cell_setup --transport-url \$url >> \"$HOME/devstack_logs/create_cell.log\"" $ssh_key
+        echo "Creating the nova cell"
+        run_ssh $DEVSTACK_IP_ADDR "url=\$(grep transport_url /etc/nova/nova-dhcpbridge.conf | awk '{print \$3}') ; nova-manage cell_v2 simple_cell_setup --transport-url \$url >> \"$HOME/devstack_logs/create_cell.log\"" $ssh_key
+        # restart nova services to refresh cached cells (some tests fail
+        # because the cell is created before the compute nodes join)
+        run_ssh $DEVSTACK_IP_ADDR "$devstack_dir/restart_nova_services.sh" $ssh_key
     fi
 
     if [ $test_suite_override ]; then
