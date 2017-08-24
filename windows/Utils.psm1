@@ -136,7 +136,7 @@ function ConfigureCeilometerPollingAgent($ConfDir, $DevstackHost, $Password)
     ConfigureOsloMessaging $ConfPath $DevstackHost $Password
 }
 
-function InstallComputeMSI($MSIPath, $DevstackHost, $Password)
+function InstallComputeMSI($MSIPath, $DevstackHost, $Password, $Branch)
 {
     $domainInfo = gwmi Win32_NTDomain
     if($domainInfo.DomainName) {
@@ -165,16 +165,26 @@ function InstallComputeMSI($MSIPath, $DevstackHost, $Password)
         mkdir $logDir
     }
 
+    if (($Branch -eq "stable/pike") -or ($Branch -eq "master")) {
+        $cell = "nova_cell1"
+        $authUrl = "http://${DevstackHost}/identity"
+    } else {
+        $cell = ""
+        $authUrl = "http://${DevstackHost}:35357/v3"
+    }
+
     $msiArgs = "/i $MSIPath /qn /l*v $msiLogPath " + `
 
     "ADDLOCAL=" + ($features -join ",") + " " +
 
     "INSTALLDIR=C:\OpenStack\cloudbase\nova " +
     "GLANCEHOST=http://$DevstackHost " +
+    "GLANCEURL=http://$DevstackHost/image " +
     "RPCBACKEND=RabbitMQ " +
     "RPCBACKENDHOST=$DevstackHost " +
     "RPCBACKENDUSER=stackrabbit " +
     "RPCBACKENDPASSWORD=$Password " +
+    "RPCTRANSPORTURL=rabbit://stackrabbit:$Password@$DevstackHost`:5672/$cell " +
 
     "INSTANCESPATH=C:\OpenStack\Instances " +
     "LOGDIR=C:\OpenStack\Log " +
@@ -197,18 +207,18 @@ function InstallComputeMSI($MSIPath, $DevstackHost, $Password)
     "PLACEMENTDOMAINNAME=Default " +
     "PLACEMENTUSERDOMAINNAME=Default " +
     "PLACEMENTREGIONNAME=RegionOne " +
-    "PLACEMENTAUTHURL=http://${DevstackHost}:35357/v3 " +
+    "PLACEMENTAUTHURL=$authUrl " +
 
     "NEUTRONURL=http://${DevstackHost}:9696 " +
     "NEUTRONADMINTENANTNAME=service " +
     "NEUTRONADMINUSERNAME=neutron " +
     "NEUTRONADMINPASSWORD=$Password " +
-    "NEUTRONADMINAUTHURL=http://${DevstackHost}:35357/v3 " +
+    "NEUTRONADMINAUTHURL=$authUrl " +
 
     "CEILOMETERADMINTENANTNAME=service " +
     "CEILOMETERADMINUSERNAME=ceilometer " +
     "CEILOMETERADMINPASSWORD=$Password " +
-    "CEILOMETERADMINAUTHURL=http://${DevstackHost}:35357/v3 "
+    "CEILOMETERADMINAUTHURL=$authUrl "
 
     if ($domainName -and $features -ccontains "LiveMigration") {
         $msiArgs += "LIVEMIGRAUTHTYPE=1 " +
@@ -223,6 +233,7 @@ function InstallComputeMSI($MSIPath, $DevstackHost, $Password)
 
     $msiArgs += "NOVACOMPUTESERVICEPASSWORD=Passw0rd "
 
+    Write-Host "Installing ""$msiArgs"""
     Write-Host "Installing ""$MSIPath"""
 
     $p = Start-Process -Wait "msiexec.exe" -ArgumentList $msiArgs -PassThru

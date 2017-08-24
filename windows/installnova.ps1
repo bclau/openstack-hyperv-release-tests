@@ -2,7 +2,8 @@ Param(
   [string]$DevstackHost = $(throw "-DevstackHost is required."),
   [string]$Password = $(throw "-Password is required."),
   [string]$InstallerUrl = $(throw "-InstallerUrl is required."),
-  [boolean]$UseOvs = $false
+  [boolean]$UseOvs = $false,
+  [string]$Branch = "master"
  )
 
  $ErrorActionPreference = "Stop"
@@ -43,7 +44,7 @@ if (IsZip "$pwd\$DownloadFile") {
     $MSIPath = "$pwd\$DownloadFile.msi"
     mv $DownloadFile $MSIPath
 
-    InstallComputeMSI $MSIPath $DevstackHost $Password
+    InstallComputeMSI $MSIPath $DevstackHost $Password $Branch
 }
 
 if ($UseOvs) {
